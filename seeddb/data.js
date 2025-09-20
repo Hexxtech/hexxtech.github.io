@@ -1,4 +1,4 @@
-const serverSeedData = {
+window.serverSeedData = {
   serverSeedDb: [
     {
       serverSeed: "01707b9930c0bba21babd5147aceac2ee18d3136abdafb099e714e7987f4aafc",
