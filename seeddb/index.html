@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ServerSeed List View (IndexedDB)</title>
+  <title>ServerSeed List View (IndexedDB with Full Controls)</title>
   <style>
     body {
       margin: 1rem;
@@ -22,13 +22,17 @@
       max-width: 480px;
       width: 100%;
       display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
       margin-bottom: 1rem;
-      flex-wrap: wrap;
+    }
+    #controls > * {
+      flex: 1 1 110px;
+      min-width: 110px;
     }
     #searchInput {
-      flex: 1 1 auto;
-      min-width: 100px;
+      flex-grow: 2;
+      min-width: 150px;
       padding: 0.5rem;
       font-size: 1rem;
       border-radius: 6px;
@@ -108,22 +112,31 @@
       label {
         margin-left: 0;
       }
-      #serverSeedList, #hashedValue, button {
+      #serverSeedList, #hashedValue, button, #searchInput {
         max-width: 100%;
       }
       #controls {
         gap: 0.25rem;
       }
     }
+    #importFileInput {
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-  <h2>ServerSeed List View (IndexedDB)</h2>
+  <h2>ServerSeed List View (IndexedDB with Full Controls)</h2>
 
   <div id="controls">
-    <input id="searchInput" type="text" placeholder="Search serverSeed or hashed value" aria-label="Search serverSeed or hashed value" />
-    <button id="copyHashedBtn" disabled>Copy Hashed Value</button>
+    <input id="searchInput" type="text" placeholder="Search or add serverSeed, press Enter" aria-label="Search or add serverSeed" />
+    <button id="removeSelectedBtn" disabled>Remove Selected</button>
+    <button id="exportBtn" title="Export serverSeed data to JSON file">Export</button>
+    <button id="importBtn" title="Import serverSeed data from JSON file">Import</button>
+    <input id="importFileInput" type="file" accept="application/json" aria-label="Import JSON file" />
+    <button id="generateSeedsBtn" title="Generate seeds by prompt">Generate Seeds</button>
+    <button id="generate1MSeedsBtn" title="Generate 1,000,000 seeds">Generate 1M Seeds</button>
+    <button id="clearDbBtn" title="Clear database">Clear Database</button>
   </div>
 
   <label for="serverSeedList">Server Seeds:</label>
@@ -155,10 +168,16 @@
 
   const serverSeedList = document.getElementById('serverSeedList');
   const hashedValue = document.getElementById('hashedValue');
-  const copyHashedBtn = document.getElementById('copyHashedBtn');
   const searchInput = document.getElementById('searchInput');
+  const removeSelectedBtn = document.getElementById('removeSelectedBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFileInput = document.getElementById('importFileInput');
+  const generateSeedsBtn = document.getElementById('generateSeedsBtn');
+  const generate1MSeedsBtn = document.getElementById('generate1MSeedsBtn');
+  const clearDbBtn = document.getElementById('clearDbBtn');
 
-  function openDb() {
+  async function openDb() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
       request.onerror = () => reject(request.error);
@@ -186,6 +205,36 @@
     });
   }
 
+  function getSeed(serverSeed) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.get(serverSeed);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function updateSeed(seed) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.put(seed);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function deleteSeed(serverSeed) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.delete(serverSeed);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   function getAllSeeds() {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, "readonly");
@@ -196,9 +245,18 @@
     });
   }
 
-  function copyToClipboard(text) {
-    return navigator.clipboard.writeText(text);
+  function clearAllSeeds() {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
   }
+
+  const serverSeedList = document.getElementById('serverSeedList');
+  const hashedValue = document.getElementById('hashedValue');
 
   function populateList() {
     serverSeedList.innerHTML = '';
@@ -229,14 +287,14 @@
     selectedIndex = index;
     if (selectedIndex === -1) {
       hashedValue.value = '';
-      copyHashedBtn.disabled = true;
+      removeSelectedBtn.disabled = true;
       return;
     }
     const selectedItem = serverSeedList.children[selectedIndex];
     selectedItem.classList.add('selected');
     selectedItem.focus();
     hashedValue.value = filteredData[selectedIndex].serverSeedHashed;
-    copyHashedBtn.disabled = false;
+    removeSelectedBtn.disabled = false;
   }
 
   serverSeedList.addEventListener('keydown', (e) => {
@@ -256,16 +314,186 @@
     }
   });
 
-  copyHashedBtn.addEventListener('click', async () => {
+  searchInput.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = searchInput.value.trim();
+      if (val === '') return;
+      // Check if exists already
+      const existing = await getSeed(val);
+      if (existing) {
+        alert('This serverSeed already exists.');
+        return;
+      }
+      try {
+        const hashed = await sha256(val);
+        await addSeed({ serverSeed: val, serverSeedHashed: hashed });
+        searchInput.value = '';
+        await reloadData();
+        selectItem(filteredData.length - 1);
+      } catch (err) {
+        alert('Error adding seed: ' + err);
+      }
+      return;
+    }
+    setTimeout(() => {
+      applyFilter();
+    }, 0);
+  });
+
+  removeSelectedBtn.addEventListener('click', async () => {
     if (selectedIndex === -1) return;
-    const textToCopy = filteredData[selectedIndex].serverSeedHashed;
+    const toRemove = filteredData[selectedIndex].serverSeed;
     try {
-      await copyToClipboard(textToCopy);
-      alert('Hashed value copied to clipboard.');
-    } catch {
-      alert('Failed to copy. Please copy manually.');
+      await deleteSeed(toRemove);
+      await reloadData();
+    } catch (e) {
+      alert('Error removing seed: ' + e.message);
     }
   });
+
+  exportBtn.addEventListener('click', async () => {
+    try {
+      const allSeeds = await getAllSeeds();
+      if (allSeeds.length === 0) {
+        alert('No data to export.');
+        return;
+      }
+      const dataStr = JSON.stringify(allSeeds, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'serverSeedData.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Export failed: ' + e.message);
+    }
+  });
+
+  importBtn.addEventListener('click', () => {
+    importFileInput.value = '';
+    importFileInput.click();
+  });
+
+  importFileInput.addEventListener('change', async () => {
+    const file = importFileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        if (!Array.isArray(importedData) || !importedData.every(item => 'serverSeed' in item && 'serverSeedHashed' in item)) {
+          throw new Error('Invalid JSON structure');
+        }
+        if (!confirm('This will replace all current data. Continue?')) return;
+        await clearAllSeeds();
+        for (const item of importedData) {
+          await addSeed(item);
+        }
+        await reloadData();
+        if (filteredData.length > 0) selectItem(0);
+        alert('Import successful.');
+      } catch (ex) {
+        alert('Import failed: ' + ex.message);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  generateSeedsBtn.addEventListener('click', async () => {
+    const input = prompt('How many serverSeeds to generate? Enter a positive number:');
+    if (!input) return;
+    const num = parseInt(input, 10);
+    if (isNaN(num) || num <= 0) {
+      alert('Please enter a valid positive number.');
+      return;
+    }
+    try {
+      await batchGenerateSeeds(num);
+      await reloadData();
+      alert(`${num} serverSeed(s) generated and saved.`);
+    } catch (e) {
+      alert('Error generating seeds: ' + e.message);
+    }
+  });
+
+  generate1MSeedsBtn.addEventListener('click', async () => {
+    if (!confirm('This will generate and save 1,000,000 unique server seeds. This may be slow and resource intensive. Continue?')) return;
+    try {
+      await batchGenerateSeeds(1000000);
+      await reloadData();
+      alert('1,000,000 server seeds generated and saved.');
+    } catch (e) {
+      alert('Error generating seeds: ' + e.message);
+    }
+  });
+
+  clearDbBtn.addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to delete all saved data? This action cannot be undone.')) return;
+    try {
+      await clearAllSeeds();
+      await reloadData();
+      alert('Database cleared.');
+    } catch (e) {
+      alert('Error clearing database: ' + e.message);
+    }
+  });
+
+  async function reloadData() {
+    serverSeedDataArr = await getAllSeeds();
+    applyFilter();
+  }
+
+  // Generate cryptographically secure random seed function
+  function generateServerSeed(lengthBytes = 32, encoding = 'hex') {
+    if (lengthBytes < 16) {
+      throw new Error('serverSeed must be at least 16 bytes for security');
+    }
+    const array = new Uint8Array(lengthBytes);
+    crypto.getRandomValues(array);
+    if (encoding === 'hex') {
+      return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+    } else if (encoding === 'base64') {
+      return btoa(String.fromCharCode(...array));
+    }
+    throw new Error('Unsupported encoding');
+  }
+
+  async function sha256(input) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  }
+
+  async function batchGenerateSeeds(total) {
+    const batchSize = 5000;
+    let processed = 0;
+    while (processed < total) {
+      const count = Math.min(batchSize, total - processed);
+      const batch = [];
+      while(batch.length < count) {
+        const seed = generateServerSeed(32, 'hex');
+        // Make sure to avoid duplicates among existing data and batch
+        if (!serverSeedDataArr.find(d => d.serverSeed === seed) && !batch.find(d => d.serverSeed === seed)) {
+          batch.push({ serverSeed: seed, serverSeedHashed: await sha256(seed) });
+        }
+      }
+      // Add batch
+      for (const item of batch) {
+        await addSeed(item);
+      }
+      processed += count;
+      // Allow UI responsive moment
+      await new Promise(r => setTimeout(r, 50));
+    }
+  }
 
   function applyFilter() {
     const query = searchInput.value.trim().toLowerCase();
@@ -284,25 +512,26 @@
     applyFilter();
   });
 
-  async function loadData() {
-    db = await openDb();
-    let seeds = await getAllSeeds();
-    if (seeds.length === 0) {
-      // Add default seeds if DB empty
-      for (const seed of defaultSeeds) {
-        await addSeed(seed);
-      }
-      seeds = await getAllSeeds();
+  document.addEventListener('click', (event) => {
+    if (!serverSeedList.contains(event.target) && event.target !== searchInput) {
+      selectItem(-1);
     }
-    serverSeedDataArr = seeds;
-    applyFilter();
-    if (filteredData.length > 0) selectItem(0);
-  }
+  });
 
-  window.addEventListener('DOMContentLoaded', () => {
-    loadData().catch(e => {
+  window.addEventListener('DOMContentLoaded', async () => {
+    try {
+      await openDb();
+      const seeds = await getAllSeeds();
+      if (seeds.length === 0) {
+        for (const defaultSeed of defaultSeeds) {
+          await addSeed(defaultSeed);
+        }
+      }
+      await reloadData();
+      if (filteredData.length > 0) selectItem(0);
+    } catch (e) {
       alert('Failed to initialize IndexedDB: ' + e.message);
-    });
+    }
   });
 </script>
 </body>
