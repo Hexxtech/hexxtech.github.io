@@ -1,0 +1,5 @@
+{
+  "name": "Grid Mapper",
+  "description": "An grip mapping app for minesweeper games",
+  "requestFramePermissions": []
+}
