@@ -1,0 +1,17 @@
+<html>
+<body>
+    <script src="https://js.puter.com/v2/"></script>
+    <script>
+        (async () => {
+            const response = await puter.ai.chat(
+                "Write a detailed essay on the impact of artificial intelligence on society", 
+                {model: 'claude-opus-4', stream: true}
+            );
+            
+            for await (const part of response) {
+                puter.print(part?.text);
+            }
+        })();
+    </script>
+</body>
+</html>
