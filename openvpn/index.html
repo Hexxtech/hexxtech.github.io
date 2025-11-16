@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OVPN Profile Generator</title>
+<style>
+  :root{
+    --bg: #0e3159;
+    --card: #1a446c;
+    --text: #ffffff;
+    --accent: #f39c12;
+    --button: #4d80d3;
+    --buttonHover: #3667c6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+  }
+  #container {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25);
+    text-align: left;
+  }
+  #logoWrap {
+    text-align:center;
+    margin-bottom: 8px;
+  }
+  #logoWrap img {
+    width: 120px;
+    height: auto;
+  }
+  h2 {
+    margin: 0 0 12px 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+  label {
+    display: block;
+    margin: 12px 0 6px;
+    font-weight: 700;
+    text-align: left;
+  }
+  select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: none;
+    background: orange;
+    color: #000;
+  }
+  select:disabled { background: #f0a34a; color: #333; }
+  button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 14px;
+    border-radius: 6px;
+    border: none;
+    background: var(--button);
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button:disabled { background: #2b467a; cursor: not-allowed; }
+  button:hover:not(:disabled) { background: var(--buttonHover); }
+  .loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--accent);
+  }
+  .error {
+    text-align: center;
+    padding: 20px;
+    color: #ff6b6b;
+  }
+  @media (max-width: 480px){
+    #container { padding: 14px; }
+    #logoWrap img { width: 100px; }
+  }
+</style>
+</head>
+<body>
+  <div id="container">
+    <div id="logoWrap" aria-label="OpenVPN logo">
+      <img src="https://www.clipartmax.com/png/small/240-2400567_openvpn-icon-open-vpn-logo-png.png" alt="OpenVPN Logo" />
+    </div>
+
+    <h2>Generate OVPN Profile</h2>
+
+    <div id="loadingMsg" class="loading">Loading servers...</div>
+    <div id="errorMsg" class="error" style="display:none;"></div>
+
+    <div id="formContent" style="display:none;">
+      <label for="countrySelect">Country</label>
+      <select id="countrySelect" disabled>
+        <option value="">Select Country</option>
+      </select>
+
+      <label for="citySelect">City</label>
+      <select id="citySelect" disabled>
+        <option value="">Select City</option>
+      </select>
+
+      <label for="nameSelect">Name</label>
+      <select id="nameSelect" disabled>
+        <option value="">Select Name</option>
+      </select>
+
+      <button id="generateBtn" disabled>Generate OVPN Profile</button>
+    </div>
+  </div>
+
+<script>
+  let serversData = null;
+
+  const countrySelect = document.getElementById('countrySelect');
+  const citySelect = document.getElementById('citySelect');
+  const nameSelect = document.getElementById('nameSelect');
+  const generateBtn = document.getElementById('generateBtn');
+  const loadingMsg = document.getElementById('loadingMsg');
+  const errorMsg = document.getElementById('errorMsg');
+  const formContent = document.getElementById('formContent');
+
+  const authUserPass = `JT5hdm7NfjYBuLbi
+We1nFYn0gfNzKEAIfKerVFA74nnwxMPr`;
+
+  const caCert = `-----BEGIN CERTIFICATE-----
+MIIFnTCCA4WgAwIBAgIUCI574SM3Lyh47GyNl0WAOYrqb5QwDQYJKoZIhvcNAQEL
+BQAwXjELMAkGA1UEBhMCQ0gxHzAdBgNVBAoMFlByb3RvbiBUZWNobm9sb2dpZXMg
+QUcxEjAQBgNVBAsMCVByb3RvblZQTjEaMBgGA1UEAwwRUHJvdG9uVlBOIFJvb3Qg
+Q0EwHhcNMTkxMDE3MDgwNjQxWhcNMzkxMDEyMDgwNjQxWjBeMQswCQYDVQQGEwJD
+SDEfMB0GA1UECgwWUHJvdG9uIFRlY2hub2xvZ2llcyBBRzESMBAGA1UECwwJUHJv
+dG9uVlBOMRowGAYDVQQDDBFQcm90b25WUE4gUm9vdCBDQTCCAiIwDQYJKoZIhvcN
+AQEBBQADggIPADCCAgoCggIBAMkUT7zMUS5C+NjQ7YoGpVFlfbN9HFgG4JiKfHB8
+QxnPPRgyTi0zVOAj1ImsRilauY8Ddm5dQtd8qcApoz6oCx5cFiiSQG2uyhS/59Zl
+5wqIkw1o+CgwZgeWkq04lcrxhhfPgJZRFjrYVezy/Z2Ssd18s3/FFNQ+2iV1KC2K
+z8eSPr50u+l9vEKsKiNGkJTdlWjoDKZM2C15i/h8Smi+PdJlx7WMTtYoVC1Fzq0r
+aCPDQl18kspu11b6d8ECPWghKcDIIKuA0r0nGqF1GvH1AmbC/xUaNrKgz9AfioZL
+MP/l22tVG3KKM1ku0eYHX7NzNHgkM2JKnBBannImQQBGTAcvvUlnfF3AHx4vzx7H
+ahpBz8ebThx2uv+vzu8lCVEcKjQObGwLbAONJN2enug8hwSSZQv7tz7onDQWlYh0
+El5fnkrEQGbukNnSyOqTwfobvBllIPzBqdO38eZFA0YTlH9plYjIjPjGl931lFAA
+3G9t0x7nxAauLXN5QVp1yoF1tzXc5kN0SFAasM9VtVEOSMaGHLKhF+IMyVX8h5Iu
+IRC8u5O672r7cHS+Dtx87LjxypqNhmbf1TWyLJSoh0qYhMr+BbO7+N6zKRIZPI5b
+MXc8Be2pQwbSA4ZrDvSjFC9yDXmSuZTyVo6Bqi/KCUZeaXKof68oNxVYeGowNeQd
+g/znAgMBAAGjUzBRMB0GA1UdDgQWBBR44WtTuEKCaPPUltYEHZoyhJo+4TAfBgNV
+HSMEGDAWgBR44WtTuEKCaPPUltYEHZoyhJo+4TAPBgNVHRMBAf8EBTADAQH/MA0G
+CSqGSIb3DQEBCwUAA4ICAQBBmzCQlHxOJ6izys3TVpaze+rUkA9GejgsB2DZXIcm
+4Lj/SNzQsPlZRu4S0IZV253dbE1DoWlHanw5lnXwx8iU82X7jdm/5uZOwj2NqSqT
+bTn0WLAC6khEKKe5bPTf18UOcwN82Le3AnkwcNAaBO5/TzFQVgnVedXr2g6rmpp9
+gdedeEl9acB7xqfYfkrmijqYMm+xeG2rXaanch3HjweMDuZdT/Ub5G6oir0Kowft
+lA1ytjXRg+X+yWymTpF/zGLYfSodWWjMKhpzZtRJZ+9B0pWXUyY7SuCj5T5SMIAu
+x3NQQ46wSbHRolIlwh7zD7kBgkyLe7ByLvGFKa2Vw4PuWjqYwrRbFjb2+EKAwPu6
+VTWz/QQTU8oJewGFipw94Bi61zuaPvF1qZCHgYhVojRy6KcqncX2Hx9hjfVxspBZ
+DrVH6uofCmd99GmVu+qizybWQTrPaubfc/a2jJIbXc2bRQjYj/qmjE3hTlmO3k7V
+EP6i8CLhEl+dX75aZw9StkqjdpIApYwX6XNDqVuGzfeTXXclk4N4aDPwPFM/Yo/e
+KnvlNlKbljWdMYkfx8r37aOHpchH34cv0Jb5Im+1H07ywnshXNfUhRazOpubJRHn
+bjDuBwWS1/Vwp5AJ+QHsPXhJdl3qHc1szJZVJb3VyAWvG/bWApKfFuZX18tiI4N0
+EA-----END CERTIFICATE-----`;
+
+  const tlsKey = `-----BEGIN OpenVPN Static key V1-----
+6acef03f62675b4b1bbd03e53b187727
+423cea742242106cb2916a8a4c829756
+3d22c7e5cef430b1103c6f66eb1fc5b3
+75a672f158e2e2e936c3faa48b035a6d
+e17beaac23b5f03b10b868d53d03521d
+8ba115059da777a60cbfd7b2c9c57472
+78a15b8f6e68a3ef7fd583ec9f398c8b
+d4735dab40cbd1e3c62a822e97489186
+c30a0b48c7c38ea32ceb056d3fa5a710
+e10ccc7a0ddb363b08c3d2777a3395e1
+0c0b6080f56309192ab5aacd4b45f55d
+a61fc77af39bd81a19218a79762c3386
+2df55785075f37d8c71dc8a42097ee43
+344739a0dd48d03025b0450cf1fb5e8c
+aeb893d9a96d1f15519bb3c4dcb40ee3
+16672ea16c012664f8a9f11255518deb
+-----END OpenVPN Static key V1-----`;
+
+  // Country code to fullname map
+  const countryMap = {
+    US: "United States",
+    JP: "Japan",
+    NL: "Netherlands",
+    GB: "United Kingdom",
+    DE: "Germany",
+    FR: "France",
+    CA: "Canada",
+    AU: "Australia",
+    CH: "Switzerland",
+    SE: "Sweden",
+    SG: "Singapore",
+    ES: "Spain",
+    IT: "Italy",
+    IN: "India",
+    BR: "Brazil",
+    // Extend as needed
+  };
+
+  // Load servers.json on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    loadServersData();
+  });
+
+  function loadServersData() {
+    fetch('servers.json')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load servers.json');
+        }
+        return response.json();
+      })
+      .then(data => {
+        serversData = data.LogicalServers || [];
+        loadingMsg.style.display = 'none';
+        formContent.style.display = 'block';
+        populateCountryDropdown();
+        countrySelect.disabled = false;
+      })
+      .catch(err => {
+        loadingMsg.style.display = 'none';
+        errorMsg.textContent = 'Error: Could not load servers.json. Make sure the file exists in the same directory.';
+        errorMsg.style.display = 'block';
+        console.error(err);
+      });
+  }
+
+  function populateCountryDropdown() {
+    clearSelect(countrySelect);
+    clearSelect(citySelect);
+    clearSelect(nameSelect);
+    addOption(countrySelect, "", "Select Country");
+    const countries = Array.from(new Set(serversData.map(s => s.EntryCountry))).sort();
+    countries.forEach(code => {
+      const fullname = countryMap[code] || code;
+      addOption(countrySelect, code, `${fullname} (${code})`);
+    });
+    citySelect.disabled = true;
+    nameSelect.disabled = true;
+    generateBtn.disabled = true;
+  }
+
+  countrySelect.addEventListener('change', () => {
+    const country = countrySelect.value;
+    populateCityDropdown(country);
+  });
+
+  function populateCityDropdown(country) {
+    clearSelect(citySelect);
+    clearSelect(nameSelect);
+    addOption(citySelect, "", "Select City");
+    if (!country) {
+      citySelect.disabled = true;
+      nameSelect.disabled = true;
+      generateBtn.disabled = true;
+      return;
+    }
+    const cities = Array.from(new Set(serversData.filter(s => s.EntryCountry === country).map(s => s.City))).sort();
+    cities.forEach(city => addOption(citySelect, city, city));
+    citySelect.disabled = false;
+    nameSelect.disabled = true;
+    generateBtn.disabled = true;
+  }
+
+  citySelect.addEventListener('change', () => {
+    const country = countrySelect.value;
+    const city = citySelect.value;
+    populateNameDropdown(country, city);
+  });
+
+  function populateNameDropdown(country, city) {
+    clearSelect(nameSelect);
+    addOption(nameSelect, "", "Select Name");
+    if (!city) {
+      nameSelect.disabled = true;
+      generateBtn.disabled = true;
+      return;
+    }
+    const names = serversData.filter(s => s.EntryCountry === country && s.City === city).map(s => s.Name).sort();
+    names.forEach(name => addOption(nameSelect, name, name));
+    nameSelect.disabled = false;
+    generateBtn.disabled = true;
+  }
+
+  nameSelect.addEventListener('change', () => {
+    generateBtn.disabled = !nameSelect.value;
+  });
+
+  generateBtn.addEventListener('click', () => {
+    const country = countrySelect.value;
+    const city = citySelect.value;
+    const name = nameSelect.value;
+    const server = serversData.find(s => s.EntryCountry === country && s.City === city && s.Name === name);
+    if (!server) {
+      alert("Server not found");
+      return;
+    }
+    const ip = server.Servers && server.Servers.length > 0 ? server.Servers[0].EntryIP : '1.2.3.4';
+    const proto = "udp";
+    const config = generateConfig(country, name, city, ip, proto);
+    const filename = generateFilename(country, name, proto);
+    downloadFile(filename, config);
+  });
+
+  function generateFilename(country, name, proto) {
+    // keep dash, uppercase, replace other special chars and spaces with _
+    const sanitize = s => s.toUpperCase().replace(/[^A-Z0-9-]/g, "_");
+    return `${sanitize(country)}.${sanitize(name)}.${proto.toUpperCase()}.ovpn`
+  }
+
+  function generateConfig(country, name, city, ip, proto) {
+    const countryFull = countryMap[country] || country;
+    const friendlyName = `setenv FRIENDLY_NAME "${countryFull} [${name}.${city}]"`;
+    return (
+      friendlyName + "\n" +
+      "client\n" +
+      "dev tun\n" +
+      `proto ${proto}\n` +
+      `remote ${ip} 5060\n` +
+      `remote ${ip} 51820\n` +
+      `remote ${ip} 1194\n` +
+      `remote ${ip} 4569\n` +
+      `remote ${ip} 80\n\n` +
+      "remote-random\n" +
+      "resolv-retry infinite\n" +
+      "nobind\n\n" +
+      "cipher AES-256-GCM\n\n" +
+      "setenv CLIENT_CERT 0\n" +
+      "tun-mtu 1500\n" +
+      "mssfix 0\n" +
+      "persist-key\n" +
+      "persist-tun\n\n" +
+      "reneg-sec 0\n\n" +
+      "remote-cert-tls server\n\n" +
+      "<auth-user-pass>\n" +
+      authUserPass + "\n" +
+      "</auth-user-pass>\n\n" +
+      "<ca>\n" +
+      caCert + "\n" +
+      "</ca>\n\n" +
+      "<tls-crypt>\n" +
+      tlsKey + "\n" +
+      "</tls-crypt>\n"
+    );
+  }
+
+  function downloadFile(filename, content) {
+    const blob = new Blob([content], {type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }, 0);
+  }
+
+  function clearSelect(sel) {
+    while(sel.options.length > 0) sel.remove(0);
+  }
+
+  function addOption(sel, val, text) {
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.text = text;
+    sel.appendChild(opt);
+  }
+
+</script>
+</body>
+</html>
