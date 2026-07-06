@@ -38,17 +38,20 @@
             background-clip: text; letter-spacing: -0.5px;
         }
         .header p { color: var(--text-secondary); font-size: 0.82rem; margin-top: 4px; }
-        .notice {
-            border-radius: var(--border-radius); padding: 12px 14px; margin-bottom: 10px;
-            font-size: 0.78rem; line-height: 1.6;
+        .cors-notice {
+            background: rgba(255,171,0,0.08); border: 1px solid rgba(255,171,0,0.2);
+            border-radius: var(--border-radius); padding: 12px 14px; margin-bottom: 12px;
+            font-size: 0.78rem; color: #ddb44a; line-height: 1.6;
         }
-        .notice a { text-decoration: underline; font-weight: 600; }
-        .notice strong { font-weight: 700; }
-        .notice-warn { background: rgba(255,171,0,0.08); border: 1px solid rgba(255,171,0,0.2); color: #ddb44a; }
-        .notice-warn a, .notice-warn strong { color: var(--warning); }
-        .notice-info { background: rgba(0,200,83,0.06); border: 1px solid rgba(0,200,83,0.15); color: #7dcea0; }
-        .notice-info strong { color: var(--success); }
-        .notice.hidden { display: none; }
+        .cors-notice strong { color: var(--warning); }
+        .cors-notice.hidden { display: none; }
+        .proxy-input-wrap { margin-top: 8px; }
+        .proxy-input-wrap input {
+            width: 100%; padding: 9px 10px; border: 1px solid rgba(255,171,0,0.3);
+            border-radius: 8px; background: var(--bg-secondary); color: var(--text-primary);
+            font-size: 0.76rem; font-family: monospace; outline: none;
+        }
+        .proxy-input-wrap .hint { font-size: 0.68rem; opacity: 0.75; margin-top: 4px; }
         .input-wrap { position: relative; margin-bottom: 12px; }
         .input-wrap input {
             width: 100%; padding: 15px 48px 15px 16px;
@@ -85,6 +88,7 @@
             font-size: 0.9rem; text-align: center; outline: none; font-family: var(--font);
         }
         .setting-row input[type="number"]:focus { border-color: var(--highlight); }
+        .setting-row input[type="number"]:disabled { opacity: 0.3; }
         .custom-select { position: relative; min-width: 150px; }
         .custom-select select {
             width: 100%; padding: 9px 32px 9px 12px;
@@ -147,12 +151,7 @@
         }
         .dot.ok { background: var(--success); animation: none; }
         .dot.err { background: var(--highlight); animation: none; }
-        .dot.throttle { background: #ff6f00; animation: blink 0.6s infinite; }
-        .dot.rotating { background: #29b6f6; animation: spin 1s linear infinite; }
-        .dot.checking { background: #ffab00; animation: pulse 0.8s ease-in-out infinite; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
         .status-label {
             font-weight: 700; font-size: 0.95rem; flex: 1; min-width: 0;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -184,9 +183,6 @@
         .badge.try { background: rgba(255,171,0,.12); color: var(--warning); border: 1px solid rgba(255,171,0,.25); }
         .badge.fail { background: rgba(233,69,96,.1); color: #ff6b81; border: 1px solid rgba(233,69,96,.2); }
         .badge.ok { background: rgba(0,200,83,.12); color: var(--success); border: 1px solid rgba(0,200,83,.25); }
-        .badge.throttle { background: rgba(255,111,0,.12); color: #ff9100; border: 1px solid rgba(255,111,0,.25); }
-        .badge.proxy { background: rgba(41,182,246,.1); color: #29b6f6; border: 1px solid rgba(41,182,246,.25); }
-        .badge.primary { background: rgba(138,43,226,.12); color: #ba68c8; border: 1px solid rgba(138,43,226,.3); }
         .log-box {
             background: var(--bg-secondary); border-radius: 10px; padding: 12px;
             max-height: 260px; overflow-y: auto;
@@ -200,9 +196,6 @@
         .log-line.err { color: #ff6b81; }
         .log-line.warn { color: var(--warning); }
         .log-line.info { color: var(--text-secondary); }
-        .log-line.throttle { color: #ff9100; }
-        .log-line.proxy { color: #29b6f6; }
-        .log-line.primary { color: #ba68c8; }
         .log-box::-webkit-scrollbar { width: 4px; }
         .log-box::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
         .dl-section { margin-top: 14px; }
@@ -216,6 +209,7 @@
         .dl-url {
             text-align: center; margin-top: 6px; font-size: 0.7rem;
             color: var(--text-secondary); word-break: break-all; line-height: 1.5;
+            cursor: pointer;
         }
         .dl-auto {
             text-align: center; margin-top: 8px; font-size: 0.75rem;
@@ -250,24 +244,25 @@
         @supports (padding: env(safe-area-inset-bottom)) {
             body { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
         }
-        .dl-iframe { display: none; width: 0; height: 0; border: none; }
     </style>
 </head>
 <body>
 <div class="container">
+
     <div class="header">
         <h1>⚡ AFH Mirror Finder</h1>
-        <p>CORS-anywhere + free proxy rotation</p>
+        <p>Async multi-connection mirror scanner</p>
     </div>
 
-    <div class="notice notice-warn" id="corsNotice">
-        <strong>⚠️ First time?</strong> Visit
-        <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" rel="noopener">cors-anywhere demo</a>
-        and click <strong>"Request temporary access"</strong> to enable the primary proxy.
-    </div>
-
-    <div class="notice notice-info" id="proxyNotice">
-        <strong>🔄 Proxy rotation enabled.</strong> Primary: cors-anywhere. Fallback: validated free proxies + direct connection.
+    <div class="cors-notice" id="corsNotice">
+        <strong>⚠️ CORS proxy required for browser fetches.</strong>
+        Defaults to <code>cors-anywhere</code>. The public demo instance
+        (<code>cors-anywhere.herokuapp.com</code>) is frequently rate-limited or dead —
+        swap in a self-hosted instance below if it's not working for you.
+        <div class="proxy-input-wrap">
+            <input type="text" id="proxyUrlInput" placeholder="https://cors-anywhere.herokuapp.com/" value="https://cors-anywhere.herokuapp.com/" autocomplete="off">
+            <div class="hint">Applied as a prefix to AFH's mirror API endpoint (not this page's own URL — proxying this page would just fetch the tool itself, not any mirror data). Leave blank to try direct (no-proxy) requests instead.</div>
+        </div>
     </div>
 
     <div class="input-wrap">
@@ -280,18 +275,18 @@
             <label for="dnsSelect">🌐 DNS Provider</label>
             <div class="custom-select">
                 <select id="dnsSelect">
-                    <option value="cloudflare">☁️ Cloudflare</option>
-                    <option value="google">🔍 Google</option>
+                    <option value="cloudflare">☁️ Cloudflare (1.1.1.1)</option>
+                    <option value="google">🔍 Google (8.8.8.8)</option>
                 </select>
             </div>
         </div>
         <div class="setting-row">
             <label for="connsInput">Parallel connections</label>
-            <input type="number" id="connsInput" value="2" min="1" max="4">
+            <input type="number" id="connsInput" value="4" min="1" max="10">
         </div>
         <div class="setting-row">
             <label for="delayInput">Retry delay (sec)</label>
-            <input type="number" id="delayInput" value="3" min="1" max="60">
+            <input type="number" id="delayInput" value="2" min="1" max="60">
         </div>
         <div class="setting-row">
             <label for="maxInput">Max rounds</label>
@@ -300,10 +295,20 @@
         <div class="setting-row">
             <div>
                 <label for="loopToggle" style="cursor:pointer">Query Loop</label>
-                <div class="loop-info">Keep querying until mirror found</div>
+                <div class="loop-info">Keep querying endlessly until a mirror responds</div>
             </div>
             <div class="toggle">
                 <input type="checkbox" id="loopToggle">
+                <span class="toggle-slider" onclick="this.previousElementSibling.click()"></span>
+            </div>
+        </div>
+        <div class="setting-row">
+            <div>
+                <label for="corsToggle" style="cursor:pointer">CORS Proxy</label>
+                <div class="loop-info">Route requests through the proxy URL above</div>
+            </div>
+            <div class="toggle">
+                <input type="checkbox" id="corsToggle" checked>
                 <span class="toggle-slider" onclick="this.previousElementSibling.click()"></span>
             </div>
         </div>
@@ -317,7 +322,7 @@
     <div class="status-card" id="card">
         <div class="status-bar">
             <div class="dot" id="dot"></div>
-            <span class="status-label" id="label">Initializing…</span>
+            <span class="status-label" id="label" aria-live="polite">Initializing…</span>
         </div>
         <div class="progress-track">
             <div class="progress-fill" id="bar"></div>
@@ -348,71 +353,53 @@
     <div class="help">
         <h3>How to use</h3>
         <p>
-            1. Click <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" rel="noopener" style="color:var(--highlight)">here</a> to enable cors-anywhere (primary proxy)<br>
-            2. Paste AFH link: <code>https://androidfilehost.com/?fid=123456</code><br>
-            3. App uses <strong>cors-anywhere first</strong>, then rotates through backups on errors<br>
-            4. Download starts automatically when mirror found
-        </p>
-        <br>
-        <h3>Proxy strategy</h3>
-        <p>
-            <strong>Primary:</strong> cors-anywhere (no validation needed)<br>
-            <strong>Backups:</strong> allorigins, corsproxy.io<br>
-            <strong>Fallback:</strong> Validated free HTTP proxies<br>
-            <strong>Direct:</strong> AFH with proper headers (last resort)
+            1. Enter a CORS proxy URL above (see note) if the toggle is <strong>ON</strong><br>
+            2. Paste an AFH link like <code>https://androidfilehost.com/?fid=123456</code><br>
+            3. Set <strong>parallel connections</strong> (more = faster but heavier)<br>
+            4. Toggle <strong>Query Loop</strong> to retry until found<br>
+            5. Hit <strong>Find Mirror</strong> — download starts automatically
         </p>
     </div>
+
 </div>
 
-<iframe id="dlFrame" class="dl-iframe"></iframe>
-
 <script>
-let running = false, stopping = false;
-let rounds = 0, totalReqs = 0, t0 = null, timer = null;
+'use strict';
+
+// ---- State ---------------------------------------------------------------
+let running = false;
+let stopping = false;
+let rounds = 0;
+let totalReqs = 0;
+let t0 = null;
+let timer = null;
 let foundUrl = null;
-let proxyPool = [];
-let workerProxyIndex = {};
+let activeControllers = new Set(); // AbortControllers for in-flight fetches, so Stop is immediate
 
 const AFH_API = 'https://androidfilehost.com/libs/otf/mirrors.otf.php';
-const AFH_ORIGIN = 'https://androidfilehost.com';
-const TIMEOUT_MS = 120;
-const PROXY_TIMEOUT = 80;
+const TIMEOUT_MS = 30000;
+const WORKER_STAGGER_MS = 800;
+const WORKER_JITTER_MS = 400;
 
-// Primary CORS proxy - no validation needed
-const PRIMARY_CORS_PROXY = {
-    name: 'cors-anywhere',
-    url: 'https://cors-anywhere.herokuapp.com/',
-    type: 'cors',
-    style: 'prepend',
-    primary: true
-};
-
-// Backup CORS proxies - no validation needed
-const BACKUP_CORS_PROXIES = [
-    { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=https://hexxtech.github.io/afh-helper/index.html', type: 'cors', style: 'param' },
-    { name: 'corsproxy.io', url: 'https://corsproxy.io/?url=https://hexxtech.github.io/afh-helper/index.html', type: 'cors', style: 'param' },
-];
-
-// Free proxy list APIs
-const PROXY_SOURCES = [];
-const DNS_EP = {
+const DNS_ENDPOINTS = {
     cloudflare: 'https://cloudflare-dns.com/dns-query',
     google: 'https://dns.google/resolve',
 };
 
-const US_KW = [
-    'united states','us','usa','america','fremont','new york','chicago',
-    'denver','dallas','virginia','los angeles','seattle','atlanta',
-    'miami','phoenix','san francisco','ashburn','newark','silicon',
-    'california','texas','oregon','washington','florida','ohio',
+const US_KEYWORDS = [
+    'united states', 'us', 'usa', 'america', 'fremont', 'new york', 'chicago',
+    'denver', 'dallas', 'virginia', 'los angeles', 'seattle', 'atlanta',
+    'miami', 'phoenix', 'san francisco', 'ashburn', 'newark', 'silicon valley',
+    'california', 'texas', 'oregon', 'washington', 'florida', 'ohio',
 ];
 
+// ---- DOM helpers -----------------------------------------------------------
 const $ = id => document.getElementById(id);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function ts() {
     const d = new Date();
-    return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+    return [d.getHours(), d.getMinutes(), d.getSeconds()]
+        .map(n => String(n).padStart(2, '0')).join(':');
 }
 
 function log(msg, cls = 'info') {
@@ -420,18 +407,38 @@ function log(msg, cls = 'info') {
     el.className = `log-line ${cls}`;
     el.innerHTML = `<span class="ts">${ts()}</span>${msg}`;
     $('logBox').appendChild(el);
-    while ($('logBox').children.length > 400) $('logBox').removeChild($('logBox').firstChild);
     $('logBox').scrollTop = $('logBox').scrollHeight;
 }
 
 function setBadge(name, state) {
-    const sid = 'b-' + name.replace(/[^a-zA-Z0-9]/g,'_');
+    const sid = 'b-' + name.replace(/[^a-zA-Z0-9]/g, '_');
     let el = document.getElementById(sid);
-    if (!el) { el = document.createElement('span'); el.id = sid; $('badges').appendChild(el); }
+    if (!el) {
+        el = document.createElement('span');
+        el.id = sid;
+        $('badges').appendChild(el);
+    }
     el.className = `badge ${state}`;
     el.textContent = name;
 }
 
+// Cancelable sleep: resolves early if `stopping` flips true, so waits
+// (retry delay, worker stagger) don't block the Stop button.
+function interruptibleSleep(ms) {
+    return new Promise(resolve => {
+        const step = 100;
+        let waited = 0;
+        const iv = setInterval(() => {
+            waited += step;
+            if (stopping || waited >= ms) {
+                clearInterval(iv);
+                resolve();
+            }
+        }, step);
+    });
+}
+
+// ---- Parsing / matching -----------------------------------------------------
 function extractFid(s) {
     s = s.trim();
     if (/^\d{4,}$/.test(s)) return s;
@@ -441,11 +448,240 @@ function extractFid(s) {
     return null;
 }
 
+function isUS(mirror) {
+    const haystack = [mirror.name, mirror.host, mirror.location, mirror.country, mirror.city]
+        .filter(Boolean).join(' ').toLowerCase();
+    return US_KEYWORDS.some(k => haystack.includes(k));
+}
+
+// Puts US mirrors first, otherwise preserves the order AFH returned them in.
+function rankMirrors(mirrors) {
+    const us = [], other = [];
+    for (const m of mirrors) (isUS(m) ? us : other).push(m);
+    return [...us, ...other];
+}
+
+// ---- Proxy handling ---------------------------------------------------------
+// Supports either a `{url}`-placeholder proxy template (e.g. corsproxy.io/?url={url})
+// or a plain prefix proxy (e.g. cors-anywhere at https://cors-anywhere.herokuapp.com/).
+function buildProxyUrl(template, targetUrl) {
+    if (!template) return targetUrl;
+    if (template.includes('{url}')) {
+        return template.replace('{url}', encodeURIComponent(targetUrl));
+    }
+    return template.endsWith('/') ? template + targetUrl : template + '/' + targetUrl;
+}
+
+// ---- DNS ---------------------------------------------------------------------
+async function resolveDNS(hostname, provider) {
+    const endpoint = DNS_ENDPOINTS[provider] || DNS_ENDPOINTS.cloudflare;
+    const controller = new AbortController();
+    activeControllers.add(controller);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    try {
+        const res = await fetch(`${endpoint}?name=${encodeURIComponent(hostname)}&type=A`, {
+            headers: { Accept: 'application/dns-json' },
+            signal: controller.signal,
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const answers = (data.Answer || []).filter(a => a.type === 1);
+        return answers.length ? answers.map(a => a.data) : null;
+    } catch {
+        return null;
+    } finally {
+        clearTimeout(timeoutId);
+        activeControllers.delete(controller);
+    }
+}
+
+// ---- Networking ---------------------------------------------------------------
+// Some browser extensions that patch CORS behavior (fetch/XHR interceptors that
+// relay the call to a background script via window.postMessage) choke on
+// AbortSignal, since it isn't structured-cloneable:
+//   "Failed to execute 'postMessage' on 'Window': AbortSignal object could not be cloned."
+// When that happens we retry once without a signal, enforcing the timeout with
+// Promise.race instead. That request can no longer be hard-cancelled on Stop,
+// but at least it won't crash the worker.
+function isUncloneableSignalError(e) {
+    return e instanceof TypeError && /postMessage/i.test(e.message) && /clon/i.test(e.message);
+}
+
+async function fetchWithTimeout(url, baseOpts, ms, connId) {
+    const controller = new AbortController();
+    activeControllers.add(controller);
+    const timeoutId = setTimeout(() => controller.abort(), ms);
+    try {
+        return await fetch(url, { ...baseOpts, signal: controller.signal });
+    } catch (e) {
+        if (isUncloneableSignalError(e)) {
+            log(`[C${connId}] Fetch-intercepting extension can't handle AbortSignal — retrying without it`, 'warn');
+            clearTimeout(timeoutId);
+            activeControllers.delete(controller);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new DOMException('Timed out', 'AbortError')), ms));
+            return await Promise.race([fetch(url, baseOpts), timeoutPromise]);
+        }
+        throw e;
+    } finally {
+        clearTimeout(timeoutId);
+        activeControllers.delete(controller);
+    }
+}
+
+async function singleQuery(fid, useProxy, proxyTemplate, connId) {
+    const targetUrl = AFH_API;
+    const url = useProxy ? buildProxyUrl(proxyTemplate, targetUrl) : targetUrl;
+
+    const body = new URLSearchParams({ submit: 'submit', action: 'getdownloadmirrors', fid });
+    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (useProxy) headers['X-Requested-With'] = 'XMLHttpRequest';
+
+    const opts = {
+        method: 'POST',
+        headers,
+        body: body.toString(),
+        credentials: 'omit',
+    };
+    if (!useProxy) {
+        // Only meaningful for direct (non-proxied) requests, and only works if the
+        // referrer URL is same-origin with this page — browsers won't let a script
+        // spoof an arbitrary cross-origin Referer. Real Origin/Referer spoofing
+        // toward AFH has to happen server-side, in the proxy itself.
+        opts.referrer = `https://androidfilehost.com/?fid=${fid}`;
+        opts.referrerPolicy = 'strict-origin-when-cross-origin';
+    }
+
+    try {
+        const res = await fetchWithTimeout(url, opts, TIMEOUT_MS, connId);
+        totalReqs++;
+        $('sReqs').textContent = totalReqs;
+
+        if (!res.ok) {
+            if (res.status === 403 && useProxy) {
+                log(`[C${connId}] 403 — your CORS proxy rejected the request (check its access rules)`, 'err');
+            } else if (res.status === 403) {
+                log(`[C${connId}] 403 — enable the CORS Proxy toggle and set a proxy URL`, 'err');
+            } else {
+                log(`[C${connId}] HTTP ${res.status}`, 'err');
+            }
+            return null;
+        }
+
+        const text = await res.text();
+        if (!text || !text.trim()) return null;
+
+        try {
+            return JSON.parse(text);
+        } catch {
+            log(`[C${connId}] Response wasn't valid JSON`, 'err');
+            return null;
+        }
+    } catch (e) {
+        totalReqs++;
+        $('sReqs').textContent = totalReqs;
+        if (e.name === 'AbortError') {
+            if (!stopping) log(`[C${connId}] Timeout (${TIMEOUT_MS / 1000}s)`, 'err');
+        } else {
+            log(`[C${connId}] ${e.message}`, 'err');
+        }
+        return null;
+    }
+}
+
+function extractMirrors(data, connId) {
+    if (!data) return null;
+    if (data.ERROR) {
+        log(`[C${connId}] API error: ${data.ERROR}`, 'err');
+        return null;
+    }
+    if (!Array.isArray(data.MIRRORS) || data.MIRRORS.length === 0) return null;
+    return rankMirrors(data.MIRRORS);
+}
+
+// One worker: keeps querying+scanning mirrors until a URL is found or stopped.
+async function worker(id, fid, useProxy, proxyTemplate, dnsProvider) {
+    while (!stopping && !foundUrl) {
+        const data = await singleQuery(fid, useProxy, proxyTemplate, id);
+        if (stopping || foundUrl) return;
+
+        const mirrors = extractMirrors(data, id);
+        if (mirrors) {
+            for (const m of mirrors) {
+                if (stopping || foundUrl) return;
+
+                const name = m.name || m.host || m.location || 'Unknown';
+                const flag = isUS(m) ? ' 🇺🇸' : '';
+                setBadge(name, 'try');
+                log(`[C${id}] <b>${name}</b>${flag}`, 'info');
+
+                if (m.host && dnsProvider) {
+                    // Fire-and-forget: informational only, never blocks the race for a URL.
+                    resolveDNS(m.host, dnsProvider).then(ips => {
+                        if (ips && ips.length && !foundUrl) {
+                            log(`[C${id}] DNS: ${m.host} → ${ips.join(', ')}`, 'info');
+                        }
+                    });
+                }
+
+                if (m.url) {
+                    if (!foundUrl) {
+                        foundUrl = m.url;
+                        setBadge(name, 'ok');
+                        log(`[C${id}] ✅ <b>${name}</b>${flag} — URL found!`, 'ok');
+                    }
+                    return;
+                }
+                setBadge(name, 'fail');
+            }
+        }
+
+        if (stopping || foundUrl) return;
+        await interruptibleSleep(WORKER_STAGGER_MS + Math.random() * WORKER_JITTER_MS);
+    }
+}
+
+async function runRound(fid, roundNum, useProxy, proxyTemplate, dnsProvider, conns) {
+    foundUrl = null;
+    log(`<b>Round ${roundNum}</b> — launching ${conns} parallel connections…`, 'info');
+    $('label').textContent = `Round ${roundNum} — ${conns} connections…`;
+
+    const workers = [];
+    for (let i = 1; i <= conns; i++) {
+        workers.push(worker(i, fid, useProxy, proxyTemplate, dnsProvider));
+    }
+    await Promise.all(workers);
+
+    if (foundUrl) return foundUrl;
+    log(`Round ${roundNum} — no mirror found across ${conns} connections`, 'warn');
+    return null;
+}
+
+// ---- Download ---------------------------------------------------------------
+function triggerDownload(url) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.rel = 'noopener noreferrer';
+    try {
+        const parts = new URL(url).pathname.split('/');
+        const filename = parts[parts.length - 1];
+        if (filename) a.download = decodeURIComponent(filename);
+    } catch { /* not a parseable URL — let the browser handle it */ }
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard?.writeText(text).then(() => log('URL copied to clipboard', 'info'));
+}
+
+// ---- UI wiring ----------------------------------------------------------------
 function tickTimer() {
     if (!t0) return;
-    const s = Math.floor((Date.now() - t0) / 1000);
-    const m = Math.floor(s / 60);
-    $('sTime').textContent = m ? `${m}m ${s%60}s` : `${s}s`;
+    const secs = Math.floor((Date.now() - t0) / 1000);
+    const mins = Math.floor(secs / 60);
+    $('sTime').textContent = mins ? `${mins}m ${secs % 60}s` : `${secs}s`;
 }
 
 function clearInput() {
@@ -454,426 +690,114 @@ function clearInput() {
     $('urlInput').focus();
 }
 
-function isUS(m) {
-    const h = [m.name||'',m.host||'',m.location||'',m.country||'',m.city||''].join(' ').toLowerCase();
-    return US_KW.some(k => h.includes(k));
-}
-
-function triggerDownload(url) {
-    const a = document.createElement('a');
-    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
-    try {
-        const p = new URL(url).pathname.split('/');
-        const f = p[p.length - 1];
-        if (f && f.length > 1) a.download = decodeURIComponent(f);
-    } catch {}
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { try { document.body.removeChild(a); } catch {} }, 200);
-    setTimeout(() => { try { $('dlFrame').src = url; } catch {} }, 700);
-}
-
-async function resolveDNS(hostname, provider) {
-    const ep = DNS_EP[provider] || DNS_EP.cloudflare;
-    try {
-        const c = new AbortController();
-        const t = setTimeout(() => c.abort(), 5000);
-        const r = await fetch(`${ep}?name=${encodeURIComponent(hostname)}&type=A`, {
-            headers: { Accept: 'application/dns-json' }, signal: c.signal
-        });
-        clearTimeout(t);
-        if (!r.ok) return null;
-        const d = await r.json();
-        if (d.Answer) {
-            const a = d.Answer.filter(x => x.type === 1);
-            return a.length ? a.map(x => x.data) : null;
-        }
-        return null;
-    } catch { return null; }
-}
-
-$('urlInput').addEventListener('input', function() {
+$('urlInput').addEventListener('input', function () {
     $('clearBtn').classList.toggle('show', this.value.length > 0);
 });
-
-$('loopToggle').addEventListener('change', function() {
+$('loopToggle').addEventListener('change', function () {
     $('maxInput').disabled = this.checked;
-    $('maxInput').style.opacity = this.checked ? '0.3' : '1';
+});
+$('corsToggle').addEventListener('change', function () {
+    $('corsNotice').classList.toggle('hidden', !this.checked);
+});
+$('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !running) start();
 });
 
-// Fetch free proxies from public APIs
-async function fetchFreeProxies() {
-    log('🔍 Fetching free proxies…', 'info');
-    const proxies = [];
-
-    for (const apiUrl of PROXY_SOURCES) {
-        if (stopping) break;
-        try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 10000);
-            const res = await fetch(apiUrl, { signal: controller.signal });
-            clearTimeout(timeout);
-            if (!res.ok) continue;
-
-            const data = await res.json();
-            if (Array.isArray(data)) {
-                data.forEach(p => {
-                    if (p.ip && p.port) {
-                        proxies.push({ name: `${p.ip}:${p.port}`, ip: p.ip, port: p.port, type: 'http', country: p.country || '?' });
-                    } else if (p.ipPort) {
-                        const [ip, port] = p.ipPort.split(':');
-                        if (ip && port) proxies.push({ name: `${ip}:${port}`, ip, port, type: 'http', country: '?' });
-                    }
-                });
-            } else if (data.data && Array.isArray(data.data)) {
-                data.data.forEach(p => {
-                    if (p.ip && p.port) {
-                        proxies.push({ name: `${p.ip}:${p.port}`, ip: p.ip, port: p.port, type: 'http', country: p.country || '?' });
-                    } else if (p.ipPort) {
-                        const [ip, port] = p.ipPort.split(':');
-                        if (ip && port) proxies.push({ name: `${ip}:${port}`, ip, port, type: 'http', country: p.country || '?' });
-                    }
-                });
-            }
-        } catch (e) {
-            log(`Proxy API error: ${e.message}`, 'warn');
-        }
-    }
-
-    log(`Found ${proxies.length} free proxy candidates`, 'info');
-    return proxies.slice(0, 5); // Limit to 5 free proxies
-}
-
-// Build proxy pool (no validation for CORS proxies)
-async function buildProxyPool() {
-    log('🔧 Building proxy pool…', 'primary');
-    $('dot').className = 'dot checking';
-    $('label').textContent = 'Building proxy pool…';
-
-    const pool = [];
-
-    // 1. Add primary CORS proxy (no validation)
-    pool.push(PRIMARY_CORS_PROXY);
-    setBadge(PRIMARY_CORS_PROXY.name, 'primary');
-    log(`✓ Primary <b>${PRIMARY_CORS_PROXY.name}</b> added`, 'primary');
-
-    // 2. Add backup CORS proxies (no validation)
-    BACKUP_CORS_PROXIES.forEach(p => {
-        pool.push(p);
-        setBadge(p.name, 'proxy');
-    });
-    log(`✓ Added ${BACKUP_CORS_PROXIES.length} backup CORS proxies`, 'info');
-
-    // 3. Fetch free HTTP proxies
-    const freeProxies = await fetchFreeProxies();
-    if (!stopping && freeProxies.length > 0) {
-        freeProxies.forEach(p => {
-            pool.push(p);
-            setBadge(p.name, 'proxy');
-        });
-        log(`✓ Added ${freeProxies.length} free proxies`, 'info');
-    }
-
-    // 4. Add direct connection as ultimate fallback
-    pool.push({
-        name: 'direct',
-        type: 'direct'
-    });
-    setBadge('direct', 'proxy');
-
-    log(`Total pool: <b>${pool.length}</b> proxies`, pool.length > 2 ? 'ok' : 'warn');
-    return pool;
-}
-
-function getProxyForWorker(workerId) {
-    if (!proxyPool.length) return null;
-    if (!workerProxyIndex[workerId]) workerProxyIndex[workerId] = 0;
-    return proxyPool[workerProxyIndex[workerId] % proxyPool.length];
-}
-
-function rotateProxyForWorker(workerId) {
-    if (!proxyPool.length) return null;
-    workerProxyIndex[workerId] = (workerProxyIndex[workerId] || 0) + 1;
-    return proxyPool[workerProxyIndex[workerId] % proxyPool.length];
-}
-
-async function queryViaProxy(fid, workerId) {
-    const proxy = getProxyForWorker(workerId);
-    if (!proxy) return { data: null, shouldRotate: false };
-
-    const body = new URLSearchParams({ submit:'submit', action:'getdownloadmirrors', fid });
-    let fetchUrl = AFH_API;
-    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-    let shouldRotate = false;
-
-    // Build request based on proxy type
-    if (proxy.type === 'cors') {
-        if (proxy.style === 'param') {
-            // URL as parameter: https://proxy.com/?url=TARGET
-            fetchUrl = proxy.url + encodeURIComponent(AFH_API);
-        } else {
-            // Prepend style: https://proxy.com/TARGET
-            fetchUrl = proxy.url + AFH_API;
-        }
-        headers['X-Requested-With'] = 'XMLHttpRequest';
-    } else if (proxy.type === 'direct') {
-        headers['Origin'] = AFH_ORIGIN;
-        headers['Referer'] = `${AFH_ORIGIN}/?fid=${fid}`;
-    }
-
-    const opts = {
-        method: 'POST',
-        headers,
-        body: body.toString(),
-        credentials: 'omit',
-    };
-
-    if (proxy.type === 'direct') {
-        opts.referrer = `${AFH_ORIGIN}/?fid=${fid}`;
-        opts.referrerPolicy = 'strict-origin-when-cross-origin';
-    }
-
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-        opts.signal = controller.signal;
-
-        const r = await fetch(fetchUrl, opts);
-        clearTimeout(timeout);
-
-        totalReqs++;
-        $('sReqs').textContent = totalReqs;
-
-        if (r.status === 429) {
-            const wait = parseInt(r.headers.get('Retry-After')) || 5;
-            log(`[W${workerId}] 429 on <b>${proxy.name}</b> — retry ${wait}s`, 'throttle');
-            setBadge(proxy.name, 'throttle');
-            if (proxyPool.length > 1) {
-                shouldRotate = true;
-            } else {
-                await sleep(wait * 1000);
-            }
-            return { data: null, shouldRotate };
-        }
-
-        if (r.status === 403) {
-            log(`[W${workerId}] 403 on <b>${proxy.name}</b>`, 'err');
-            setBadge(proxy.name, 'fail');
-            if (proxyPool.length > 1) shouldRotate = true;
-            return { data: null, shouldRotate };
-        }
-
-        if (!r.ok) {
-            log(`[W${workerId}] HTTP ${r.status} on <b>${proxy.name}</b>`, 'err');
-            return { data: null, shouldRotate: false };
-        }
-
-        const txt = await r.text();
-        if (!txt || !txt.trim()) return { data: null, shouldRotate: false };
-
-        try {
-            return { data: JSON.parse(txt), shouldRotate: false };
-        } catch {
-            log(`[W${workerId}] Bad JSON from <b>${proxy.name}</b>`, 'err');
-            return { data: null, shouldRotate: false };
-        }
-
-    } catch (e) {
-        totalReqs++;
-        $('sReqs').textContent = totalReqs;
-
-        if (e.name === 'AbortError') {
-            log(`[W${workerId}] Timeout on <b>${proxy.name}</b>`, 'warn');
-            setBadge(proxy.name, 'fail');
-            if (proxyPool.length > 1) shouldRotate = true;
-        } else {
-            log(`[W${workerId}] ${e.message} on <b>${proxy.name}</b>`, 'err');
-        }
-        return { data: null, shouldRotate };
-    }
-}
-
-function processMirrors(data, workerId) {
-    if (!data) return null;
-    if (data.ERROR) {
-        log(`[W${workerId}] API: ${data.ERROR}`, 'err');
-        return null;
-    }
-    if (!data.MIRRORS || !Array.isArray(data.MIRRORS) || !data.MIRRORS.length) return null;
-    const us = [], other = [];
-    for (const m of data.MIRRORS) (isUS(m) ? us : other).push(m);
-    return [...us, ...other];
-}
-
-async function worker(id, fid, dnsProvider) {
-    await sleep(id * 500);
-    let consecutiveFails = 0;
-
-    while (!stopping && !foundUrl) {
-        const result = await queryViaProxy(fid, id);
-        if (stopping || foundUrl) return;
-
-        if (result.shouldRotate && proxyPool.length > 1) {
-            const oldP = getProxyForWorker(id);
-            const newP = rotateProxyForWorker(id);
-            const oldClass = oldP.primary ? 'primary' : 'proxy';
-            const newClass = newP.primary ? 'primary' : 'proxy';
-            log(`[W${id}] 🔄 <b>${oldP.name}</b> → <b>${newP.name}</b>`, newClass);
-            setBadge(oldP.name, 'fail');
-            setBadge(newP.name, newClass);
-            $('dot').className = 'dot rotating';
-            await sleep(1000);
-            $('dot').className = 'dot';
-            consecutiveFails = 0;
-            continue;
-        }
-
-        if (result.data) {
-            consecutiveFails = 0;
-            const mirrors = processMirrors(result.data, id);
-
-            if (mirrors && mirrors.length) {
-                log(`[W${id}] ${mirrors.length} mirror(s)`, 'ok');
-                for (const m of mirrors) {
-                    if (stopping || foundUrl) return;
-                    const name = m.name || m.host || m.location || 'Unknown';
-                    const flag = isUS(m) ? '🇺🇸' : '';
-                    setBadge(name, 'try');
-                    log(`[W${id}] ${name} ${flag}`, 'info');
-
-                    if (m.host && dnsProvider) {
-                        resolveDNS(m.host, dnsProvider).then(ips => {
-                            if (ips && ips.length && !foundUrl)
-                                log(`[W${id}] DNS ${m.host}: ${ips[0]}`, 'info');
-                        });
-                    }
-
-                    if (m.url) {
-                        if (!foundUrl) {
-                            foundUrl = m.url;
-                            setBadge(name, 'ok');
-                            log(`[W${id}] ✅ ${name} ${flag}`, 'ok');
-                            return;
-                        }
-                    } else {
-                        setBadge(name, 'fail');
-                    }
-                }
-            }
-        } else {
-            consecutiveFails++;
-            if (consecutiveFails > 3) {
-                await sleep(2000);
-                consecutiveFails = 0;
-            }
-        }
-
-        if (stopping || foundUrl) return;
-        await sleep(1000 + Math.random() * 1000);
-    }
-}
-
-async function runRound(fid, rnd, dnsProvider, conns) {
-    foundUrl = null;
-    log(`<b>Round ${rnd}</b> — ${conns} workers`, 'info');
-    $('label').textContent = `Round ${rnd} — querying…`;
-
-    const workers = [];
-    for (let i = 1; i <= conns; i++) {
-        workers.push(worker(i, fid, dnsProvider));
-    }
-
-    const sentinel = new Promise(resolve => {
-        const check = setInterval(() => {
-            if (foundUrl || stopping) {
-                clearInterval(check);
-                resolve();
-            }
-        }, 200);
-    });
-
-    await Promise.race([Promise.all(workers), sentinel]);
-
-    if (foundUrl) return foundUrl;
-    log(`Round ${rnd} — no mirror`, 'warn');
-    return null;
-}
-
+// ---- Main flow ------------------------------------------------------------------
 async function start() {
     const fid = extractFid($('urlInput').value);
-    if (!fid) { alert('Enter valid AFH link or file ID'); return; }
+    if (!fid) {
+        alert('Enter a valid AndroidFileHost link or file ID');
+        return;
+    }
 
-    const delay = Math.max(1, parseInt($('delayInput').value) || 3);
-    const maxR = parseInt($('maxInput').value) || 50;
+    const delaySec = Math.max(1, parseInt($('delayInput').value, 10) || 2);
+    const maxRounds = parseInt($('maxInput').value, 10) || 50;
     const loop = $('loopToggle').checked;
+    const useProxy = $('corsToggle').checked;
+    const proxyTemplate = $('proxyUrlInput').value.trim();
     const dnsProvider = $('dnsSelect').value;
-    const conns = Math.max(1, Math.min(4, parseInt($('connsInput').value) || 2));
+    const conns = Math.max(1, Math.min(10, parseInt($('connsInput').value, 10) || 4));
 
-    running = true; stopping = false; foundUrl = null;
-    rounds = 0; totalReqs = 0; workerProxyIndex = {}; t0 = Date.now();
+    if (useProxy && !proxyTemplate) {
+        alert('CORS Proxy is on but no proxy URL is set. Add one, or turn the toggle off.');
+        return;
+    }
+
+    running = true;
+    stopping = false;
+    foundUrl = null;
+    rounds = 0;
+    totalReqs = 0;
+    t0 = Date.now();
+    activeControllers = new Set();
 
     $('card').classList.add('active');
     $('startBtn').style.display = 'none';
     $('stopBtn').style.display = 'flex';
-    $('dot').className = 'dot checking';
+    $('dot').className = 'dot';
     $('bar').className = 'progress-fill';
     $('bar').style.background = '';
-    $('sFileId').textContent = fid.length > 12 ? fid.slice(0,12)+'…' : fid;
+    $('sFileId').textContent = fid.length > 12 ? fid.slice(0, 12) + '…' : fid;
     $('sRound').textContent = '0';
     $('sReqs').textContent = '0';
     $('sTime').textContent = '0s';
     $('logBox').innerHTML = '';
     $('badges').innerHTML = '';
     $('dlSection').innerHTML = '';
-    try { $('dlFrame').src = ''; } catch {}
+    $('label').textContent = 'Starting…';
     timer = setInterval(tickTimer, 1000);
 
-    log(`File: <b>${fid}</b>`, 'info');
-    log(`Workers: ${conns} | DNS: ${dnsProvider} | ${loop?'∞ Loop':'Max '+maxR}`, 'info');
-
-    // Build proxy pool (no validation for CORS proxies)
-    proxyPool = await buildProxyPool();
-    if (stopping) { cleanup(); return; }
-
-    $('dot').className = 'dot';
-    log(`🚀 Starting with ${proxyPool.length} proxies…`, 'ok');
+    log(`File ID: <b>${fid}</b>`, 'info');
+    log(`Proxy: <b>${useProxy ? 'ON' : 'OFF'}</b> | DNS: <b>${dnsProvider}</b> | Timeout: <b>${TIMEOUT_MS / 1000}s</b>`, 'info');
+    log(`Connections: <b>${conns}</b> | Delay: ${delaySec}s | ${loop ? '∞ Loop' : 'Max ' + maxRounds}`, 'info');
+    log(`Priority: <b>🇺🇸 US mirrors first</b>`, 'info');
 
     let result = null;
-    let r = 0;
+    let round = 0;
 
     while (true) {
         if (stopping) break;
-        r++;
-        rounds = r;
-        $('sRound').textContent = r;
-        if (!loop && r > maxR) { log(`Max ${maxR} rounds`, 'err'); break; }
+        round++;
+        rounds = round;
+        $('sRound').textContent = round;
 
-        result = await runRound(fid, r, dnsProvider, conns);
-        if (result) break;
-        if (stopping) break;
+        if (!loop && round > maxRounds) {
+            log(`Max rounds reached (${maxRounds})`, 'err');
+            break;
+        }
 
-        for (let s = delay; s > 0; s--) {
+        result = await runRound(fid, round, useProxy, proxyTemplate, dnsProvider, conns);
+        if (result || stopping) break;
+
+        for (let s = delaySec; s > 0; s--) {
             if (stopping) break;
-            $('label').textContent = `Round ${r} — retry ${s}s…`;
-            await sleep(1000);
+            $('label').textContent = `Round ${round} — next in ${s}s…`;
+            await interruptibleSleep(1000);
         }
     }
 
-    cleanup();
+    clearInterval(timer);
+    tickTimer();
+    running = false;
 
     if (result) {
         $('dot').className = 'dot ok';
         $('bar').className = 'progress-fill done';
         $('bar').style.background = 'var(--success)';
-        $('label').textContent = '✅ Found — Downloading!';
+        $('label').textContent = '✅ Mirror Found — Downloading!';
         log(`🎉 ${result}`, 'ok');
-        log(`Total: ${totalReqs} requests in ${$('sTime').textContent}`, 'info');
+        log(`⬇️ Auto-download triggered`, 'ok');
+        log(`Total requests: <b>${totalReqs}</b> in <b>${$('sTime').textContent}</b>`, 'info');
+
         triggerDownload(result);
+
         $('dlSection').innerHTML = `
-            <a class="dl-btn" href="${result}" target="_blank" rel="noopener">⬇️ Download Again</a>
-            <div class="dl-url">${result}</div>
-            <div class="dl-auto">✔ Download started</div>
+            <a class="dl-btn" href="${result}" target="_blank" rel="noopener noreferrer">⬇️ Download Again</a>
+            <div class="dl-url" title="Click to copy">${result}</div>
+            <div class="dl-auto">✔ Download started automatically</div>
         `;
+        $('dlSection').querySelector('.dl-url').addEventListener('click', () => copyToClipboard(result));
     } else if (stopping) {
         $('dot').className = 'dot err';
         $('bar').className = 'progress-fill fail';
@@ -882,23 +806,23 @@ async function start() {
     } else {
         $('dot').className = 'dot err';
         $('bar').className = 'progress-fill fail';
-        $('label').textContent = 'No mirror';
-        log('Enable Query Loop or try later', 'warn');
+        $('label').textContent = 'No mirror found';
+        log('Try again or enable Query Loop', 'warn');
     }
-}
 
-function cleanup() {
-    clearInterval(timer);
-    tickTimer();
-    running = false;
     $('startBtn').style.display = 'flex';
     $('startBtn').disabled = false;
     $('stopBtn').style.display = 'none';
 }
 
-function stop() { stopping = true; $('label').textContent = 'Stopping…'; }
+function stop() {
+    stopping = true;
+    $('label').textContent = 'Stopping…';
+    // Immediately cancel every in-flight fetch instead of waiting for timeouts.
+    for (const controller of activeControllers) controller.abort();
+    activeControllers.clear();
+}
 
-$('urlInput').addEventListener('keydown', e => { if (e.key==='Enter' && !running) start(); });
 $('urlInput').focus();
 </script>
 </body>
