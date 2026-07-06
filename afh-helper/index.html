@@ -375,8 +375,8 @@ let workerProxyIndex = {};
 
 const AFH_API = 'https://androidfilehost.com/libs/otf/mirrors.otf.php';
 const AFH_ORIGIN = 'https://androidfilehost.com';
-const TIMEOUT_MS = 12000;
-const PROXY_TIMEOUT = 8000;
+const TIMEOUT_MS = 120;
+const PROXY_TIMEOUT = 80;
 
 // Primary CORS proxy - no validation needed
 const PRIMARY_CORS_PROXY = {
@@ -389,14 +389,14 @@ const PRIMARY_CORS_PROXY = {
 
 // Backup CORS proxies - no validation needed
 const BACKUP_CORS_PROXIES = [
-    { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=', type: 'cors', style: 'param' },
-    { name: 'corsproxy.io', url: 'https://corsproxy.io/?url=', type: 'cors', style: 'param' },
+    { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=https://hexxtech.github.io/afh-helper/index.html', type: 'cors', style: 'param' },
+    { name: 'corsproxy.io', url: 'https://corsproxy.io/?url=https://hexxtech.github.io/afh-helper/index.html', type: 'cors', style: 'param' },
 ];
 
 // Free proxy list APIs
 const PROXY_SOURCES = [
     'https://api.proxyscrape.com/v2/?request=get&protocol=http&timeout=8000&country=all&ssl=all&anonymity=all&format=json',
-    'http://pubproxy.com/api/proxy?limit=10&format=json&type=http',
+    'https://pubproxy.com/api/proxy?limit=10&format=json&type=https',
 ];
 
 const DNS_EP = {
