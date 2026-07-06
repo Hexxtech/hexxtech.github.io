@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data>
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="sbl1.img" label="sbl1" num_partition_sectors="1024" size_in_KB="512" start_sector="34" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="sbl1bak.img" label="sbl1bak" num_partition_sectors="1024" size_in_KB="512" start_sector="1058" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="aboot.img" label="aboot" num_partition_sectors="2048" size_in_KB="1024" start_sector="2082" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="abootbak.img" label="abootbak" num_partition_sectors="2048" size_in_KB="1024" start_sector="4130" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="rpm.img" label="rpm" num_partition_sectors="1024" size_in_KB="512" start_sector="6178" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="rpmbak.img" label="rpmbak" num_partition_sectors="1024" size_in_KB="512" start_sector="7202" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="tz.img" label="tz" num_partition_sectors="1024" size_in_KB="512" start_sector="8226" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="tzbak.img" label="tzbak" num_partition_sectors="1024" size_in_KB="512" start_sector="9250" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="pad.img" label="pad" num_partition_sectors="2048" size_in_KB="1024" start_sector="10274" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="modemst1.img" label="modemst1" num_partition_sectors="3072" size_in_KB="1536" start_sector="12322" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="modemst2.img" label="modemst2" num_partition_sectors="3072" size_in_KB="1536" start_sector="15394" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="misc.img" label="misc" num_partition_sectors="2048" size_in_KB="1024" start_sector="18466" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="params.img" label="params" num_partition_sectors="2048" size_in_KB="1024" start_sector="20514" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="panic.img" label="panic" num_partition_sectors="40960" size_in_KB="20480" start_sector="22562" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="fsc.img" label="fsc" num_partition_sectors="2" size_in_KB="1" start_sector="63522" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="ssd.img" label="ssd" num_partition_sectors="16" size_in_KB="8" start_sector="63524" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="keystore.img" label="keystore" num_partition_sectors="1024" size_in_KB="512" start_sector="63540" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="config.img" label="config" num_partition_sectors="1024" size_in_KB="512" start_sector="64564" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="oem.img" label="oem" num_partition_sectors="2048" size_in_KB="1024" start_sector="65588" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="modem.img" label="modem" num_partition_sectors="131072" size_in_KB="65536" start_sector="67636" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="devinfo.img" label="devinfo" num_partition_sectors="2048" size_in_KB="1024" start_sector="198708" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="DDR.img" label="DDR" num_partition_sectors="64" size_in_KB="32" start_sector="200756" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="fsg.img" label="fsg" num_partition_sectors="3072" size_in_KB="1536" start_sector="200820" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="boot.img" label="boot" num_partition_sectors="32768" size_in_KB="16384" start_sector="203892" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="sec.img" label="sec" num_partition_sectors="32" size_in_KB="16" start_sector="236660" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="system.img" label="system" num_partition_sectors="2936016" size_in_KB="1468008" start_sector="236692" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="persist.img" label="persist" num_partition_sectors="65536" size_in_KB="32768" start_sector="3172708" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="cache.img" label="cache" num_partition_sectors="524288" size_in_KB="262144" start_sector="3238244" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="recovery.img" label="recovery" num_partition_sectors="32768" size_in_KB="16384" start_sector="3762532" />
+  <program sector_size_in_bytes="512" file_sector_offset="0" filename="userdata.img" label="userdata" num_partition_sectors="3825327" size_in_KB="1912663" start_sector="3795300" />
+</data>
