@@ -1,0 +1,309 @@
+// ==UserScript==
+// @name         LookMovie Ultimate
+// @namespace    http://tampermonkey.net/
+// @version      7.0
+// @description  Blocks cross-domain popups/redirects (incl. iframe-realm tricks), zeroes API ad timeouts, hides ad elements on lookmovie2.to. CSS-only hiding — zero reflow overhead.
+// @author       xProject
+// @match        https://*.lookmovie2.to/*
+// @match        https://lookmovie2.to/*
+// @run-at       document-start
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    // ==========================================
+    // PART 0: Neutralise `debugger` anti-devtools traps
+    // ==========================================
+
+    const strip = (a) => (typeof a === 'string' ? a.replace(/\bdebugger\b\s*;?/g, '') : a);
+
+    const _Function = window.Function;
+    const FnProxy = new Proxy(_Function, {
+        apply: (t, thisArg, args) => t.apply(thisArg, args.map(strip)),
+        construct: (t, args, nt) => Reflect.construct(t, args.map(strip), nt)
+    });
+    try {
+        Object.defineProperty(_Function.prototype, 'constructor', {
+            value: FnProxy, writable: true, configurable: true
+        });
+    } catch (e) {}
+    window.Function = FnProxy;
+
+    ['setTimeout', 'setInterval'].forEach((name) => {
+        const orig = window[name];
+        window[name] = function (fn, ...rest) {
+            return orig.call(this, strip(fn), ...rest);
+        };
+    });
+
+    // ==========================================
+    // PART 1: Element Hider (CSS-only, no DOM purging)
+    //
+    // WHY NO querySelectorAll / .remove()?
+    //   Running DOM queries on every mutation caused 90ms forced
+    //   reflows that blocked the main thread and created the very
+    //   flash we were trying to prevent.  CSS rules are applied by
+    //   the rendering engine *before* paint — no JS overhead needed.
+    // ==========================================
+
+    const targetSelectors = [
+        '.bottom-message-container',
+        '#floating-ads-internal',
+        '.ad-container',
+        '[data-ads-url]'
+    ];
+
+    // Belt-and-suspenders CSS: even if the site sets inline
+    // display:block!important, the combination of visibility,
+    // dimensions, opacity, pointer-events, and z-index keeps
+    // the element invisible and non-interactive.
+    const cssText = targetSelectors.map(s =>
+        `${s}{` +
+            `display:none!important;` +
+            `visibility:hidden!important;` +
+            `width:0!important;` +
+            `height:0!important;` +
+            `max-width:0!important;` +
+            `max-height:0!important;` +
+            `opacity:0!important;` +
+            `overflow:hidden!important;` +
+            `pointer-events:none!important;` +
+            `position:fixed!important;` +
+            `z-index:-2147483648!important;` +
+        `}`
+    ).join('\n');
+
+    // Inject immediately — document.documentElement (<html>) always
+    // exists at document-start in Tampermonkey, no retry needed.
+    const style = document.createElement('style');
+    style.textContent = cssText;
+    document.documentElement.appendChild(style);
+
+    // The ONLY job of this observer: if the site removes our <style>,
+    // re-append it instantly.  No querySelectorAll, no reflows.
+    new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            for (const node of m.removedNodes) {
+                if (node === style) {
+                    document.documentElement.appendChild(style);
+                    return;                 // done — stop iterating
+                }
+            }
+        }
+    }).observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+
+    // ==========================================
+    // PART 2: API Response Modifier (Fetch & XHR)
+    // ==========================================
+
+    const TARGET_ENDPOINTS = [
+        '/api/v1/security/movie-access',
+        '/api/v1/security/episode-access'
+    ];
+
+    const modifyPayload = (text) => {
+        if (!text) return text;
+        if (text.includes('"config":{"tortureTimeout":10,"adTimeout":10')) {
+            console.log('[API Interceptor] Found timeout config, replacing with 0...');
+            return text.replace(
+                '"config":{"tortureTimeout":10,"adTimeout":10',
+                '"config":{"tortureTimeout":0,"adTimeout":0'
+            );
+        }
+        return text;
+    };
+
+    // --- Fetch ---
+    const originalFetch = window.fetch;
+    window.fetch = async function (...args) {
+        const url = args[0] instanceof Request ? args[0].url : args[0];
+        const urlStr = String(url);
+        const response = await originalFetch.apply(this, args);
+
+        if (TARGET_ENDPOINTS.some(ep => urlStr.includes(ep))) {
+            try {
+                const text = await response.clone().text();
+                const modifiedText = modifyPayload(text);
+                if (text !== modifiedText) {
+                    return new Response(modifiedText, {
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: response.headers
+                    });
+                }
+            } catch (e) {
+                console.error('[API Interceptor] Error modifying fetch response:', e);
+            }
+        }
+        return response;
+    };
+
+    // --- XHR ---
+    const originalXHR = window.XMLHttpRequest;
+    function ModifiedXHR() {
+        const xhr = new originalXHR();
+        let requestUrl = '';
+
+        const originalOpen = xhr.open;
+        xhr.open = function (method, url, ...rest) {
+            requestUrl = String(url);
+            return originalOpen.apply(this, [method, url, ...rest]);
+        };
+
+        const originalSend = xhr.send;
+        xhr.send = function (...rest) {
+            if (TARGET_ENDPOINTS.some(ep => requestUrl.includes(ep))) {
+                const patch = () => {
+                    try {
+                        const modified = modifyPayload(xhr.responseText);
+                        if (modified !== xhr.responseText) {
+                            Object.defineProperty(xhr, 'responseText', {
+                                value: modified, writable: true
+                            });
+                            Object.defineProperty(xhr, 'response', {
+                                value: modified, writable: true
+                            });
+                        }
+                    } catch (e) {
+                        console.error('[API Interceptor] Error modifying XHR response:', e);
+                    }
+                };
+
+                const origRSC = xhr.onreadystatechange;
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4) patch();
+                    if (origRSC) origRSC.apply(this, arguments);
+                };
+
+                const origLoad = xhr.onload;
+                xhr.onload = function () {
+                    patch();
+                    if (origLoad) origLoad.apply(this, arguments);
+                };
+            }
+            return originalSend.apply(this, rest);
+        };
+
+        return xhr;
+    }
+    window.XMLHttpRequest = ModifiedXHR;
+
+    // ==========================================
+    // PART 3: Anti-Redirect & Pop-up Blocker
+    // ==========================================
+
+    const sameSite = (u) => {
+        try {
+            return new URL(String(u), location.href).hostname === location.hostname;
+        } catch (e) {
+            return false;
+        }
+    };
+
+    const patchWindow = (win) => {
+        try {
+            if (win.__lmPatched) return;
+            Object.defineProperty(win, '__lmPatched', { value: true });
+
+            win.open = function (url) {
+                console.trace('[blocked open]', url);
+                return {
+                    closed: false,
+                    focus() {}, blur() {}, close() {},
+                    location: {},
+                    document: { write() {}, close() {} }
+                };
+            };
+
+            const AP = win.HTMLAnchorElement.prototype;
+            const _aClick = AP.click;
+            AP.click = function () {
+                if (this.href && (!sameSite(this.href) || this.target === '_blank')) {
+                    console.trace('[blocked a.click]', this.href);
+                    return;
+                }
+                return _aClick.apply(this, arguments);
+            };
+
+            const ET = win.EventTarget.prototype;
+            const _dispatch = ET.dispatchEvent;
+            ET.dispatchEvent = function (e) {
+                if (this instanceof win.HTMLAnchorElement && e && e.type === 'click' &&
+                    this.href && (!sameSite(this.href) || this.target === '_blank')) {
+                    console.trace('[blocked a.dispatchEvent]', this.href);
+                    return false;
+                }
+                return _dispatch.apply(this, arguments);
+            };
+
+            const FP = win.HTMLFormElement.prototype;
+            const _submit = FP.submit;
+            FP.submit = function () {
+                if (this.action && (!sameSite(this.action) || this.target === '_blank')) {
+                    console.trace('[blocked form]', this.action);
+                    return;
+                }
+                return _submit.apply(this, arguments);
+            };
+        } catch (e) {}
+    };
+
+    patchWindow(window);
+
+    try {
+        const cwDesc = Object.getOwnPropertyDescriptor(
+            HTMLIFrameElement.prototype, 'contentWindow'
+        );
+        Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
+            configurable: true,
+            get() {
+                const w = cwDesc.get.call(this);
+                if (w) patchWindow(w);
+                return w;
+            }
+        });
+
+        const cdDesc = Object.getOwnPropertyDescriptor(
+            HTMLIFrameElement.prototype, 'contentDocument'
+        );
+        Object.defineProperty(HTMLIFrameElement.prototype, 'contentDocument', {
+            configurable: true,
+            get() {
+                const d = cdDesc.get.call(this);
+                if (d && d.defaultView) patchWindow(d.defaultView);
+                return d;
+            }
+        });
+    } catch (e) {}
+
+    if (window.navigation) {
+        window.navigation.addEventListener('navigate', (e) => {
+            if (e.cancelable && !sameSite(e.destination.url)) {
+                console.trace('[blocked navigate]', e.destination.url);
+                e.preventDefault();
+            }
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        const a = e.target.closest && e.target.closest('a');
+        if (a && a.href && (!sameSite(a.href) || a.target === '_blank')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            console.log('[blocked link click]', a.href);
+        }
+    }, true);
+
+    window.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('a').forEach(a => {
+            if (a.hostname && a.hostname !== location.hostname) {
+                a.removeAttribute('target');
+            }
+        });
+    });
+})();
